@@ -1,0 +1,414 @@
+[ Description ("") ]
+[ FormDesignerId ("7BF96825-2F2F-4C2D-886B-5CEFDA6C3F3E") ]
+[ PredeclaredId ]
+Class Form1
+Private pWW As WwanRadioManager
+Private pInstWW As IRadioInstance
+Private pColWW As IRadioInstanceCollection
+Private nWW As Long
+    
+Private pWL As WlanRadioManager
+Private pInstWL As IRadioInstance
+Private pColWL As IRadioInstanceCollection
+Private nWL As Long
+
+Private pBT As BluetoothRadioManager
+Private pInstBT As IRadioInstance
+Private pColBT As IRadioInstanceCollection
+Private nBT As Long
+
+Private pRM As RadioManagementAPI
+    
+Private Sub EnumRadios()
+    Dim i As Long
+    Dim sBuff As String, sBuffId As String
+    Dim priid As UUID
+    nWW = 0: nWL = 0: nBT = 0
+	On Error Resume Next 'handle creation errors manually
+    Set pWW = New WwanRadioManager
+    If pWW IsNot Nothing Then
+        pWW.GetRadioInstances(pColWW)
+        If (pColWW IsNot Nothing) Then
+        	pColWW.GetCount(nWW)
+            If nWW Then
+            	For i = 0 To nWW - 1
+                	pColWW.GetAt(i, pInstWW)
+                    Debug.Print "Add WW radio 0"
+                    pInstWW.GetFriendlyName(GetUserDefaultLCID(), sBuff)
+                    pInstWW.GetInstanceSignature(sBuffId)
+                    pInstWW.GetRadioManagerSignature(priid)
+                    List1.AddItem(sBuff & " (InstId=" & sBuffId & ", RmSig=" & GUIDToString(priid))
+                    Set pInstWW = Nothing
+            	Next
+            End If
+            Text1.Text = CStr(nWW) & " WWAN " & IIf(nWW = 1, "radio", "radios") & " found."
+        Else
+            Text1.Text = "Failed to get WWAN radio collection object."
+        End If
+    Else
+    	Text1.Text = "Could not create WwanRadioManager."
+    End If
+    
+    Set pWL = New WlanRadioManager
+    If pWL IsNot Nothing Then
+        pWL.GetRadioInstances(pColWL)
+        If (pColWL IsNot Nothing) Then
+            pColWL.GetCount(nWL)
+            If nWL Then
+                For i = 0 To nWL - 1
+                    pColWL.GetAt(i, pInstWL)
+                    Debug.Print "Add WL radio 0"
+                    pInstWL.GetFriendlyName(GetUserDefaultLCID(), sBuff)
+                    pInstWL.GetInstanceSignature(sBuffId)
+                    pInstWL.GetRadioManagerSignature(priid)
+                    List2.AddItem(sBuff & " (InstId=" & sBuffId & ", RmSig=" & GUIDToString(priid))
+                    Set pInstWL = Nothing
+                Next
+            End If
+            Text2.Text = CStr(nWL) & " WLAN " & IIf(nWL = 1, "radio", "radios") & " found."
+        Else
+            Text2.Text = "Failed to get WLAN radio collection object."
+        End If
+    Else
+        Text2.Text = "Could not create WlanRadioManager."
+    End If
+    
+    Set pBT = New BluetoothRadioManager
+    If pBT IsNot Nothing Then
+        pBT.GetRadioInstances(pColBT)
+        If (pColBT IsNot Nothing) Then
+            pColBT.GetCount(nBT)
+            If nBT Then
+                For i = 0 To nBT - 1
+                    pColBT.GetAt(i, pInstBT)
+                    Debug.Print "Add BT radio 0"
+                    pInstBT.GetFriendlyName(GetUserDefaultLCID(), sBuff)
+                    pInstBT.GetInstanceSignature(sBuffId)
+                    pInstBT.GetRadioManagerSignature(priid)
+                    List3.AddItem(sBuff & " (InstId=" & sBuffId & ", RmSig=" & GUIDToString(priid))
+                    Set pInstBT = Nothing
+                Next
+            End If
+            Text3.Text = CStr(nBT) & " Bluetooth " & IIf(nBT = 1, "radio", "radios") & " found."
+        Else
+            Text3.Text = "Failed to get Bluetooth radio collection object."
+        End If
+    Else
+        Text3.Text = "Could not create BluetoothRadioManager."
+    End If
+    
+    
+End Sub
+    
+Private Function RadioFromIndex(nIdx As Long, nType As Long) As IRadioInstance
+	Dim pColCur As IRadioInstanceCollection
+    Dim pInstCur As IRadioInstance
+    Dim sID As String
+    Select Case nType
+    	Case 1
+            If pColWW IsNot Nothing Then Set pColCur = pColWW
+            sID = List1.List(List1.ListIndex)
+        Case 2
+            If pColWL IsNot Nothing Then Set pColCur = pColWL
+            sID = List2.List(List2.ListIndex)
+        Case 3
+            If pColBT IsNot Nothing Then Set pColCur = pColBT
+            sID = List3.List(List3.ListIndex)
+    End Select
+    sID = Mid$(sID, InStr(sID, "InstId=") + 7)
+    sID = Left$(sID, InStr(sID, ", RmSig=") - 1)
+    If pColCur IsNot Nothing Then
+    	Dim n As Long, i As Long
+        Dim sBuffId As String
+        pColCur.GetCount(n)
+        If n Then
+            For i = 0 To n - 1
+                pColCur.GetAt(i, pInstCur)
+                pInstCur.GetInstanceSignature(sBuffId)
+                If sID = sBuffId Then
+                	Debug.Print "Matched"
+                	Set RadioFromIndex = pInstCur
+                    Exit Function
+                End If
+            Next
+        End If
+    End If
+    Debug.Print "No match"
+End Function
+
+
+Private Function GUIDToString(tg As UUID, Optional bBrack As Boolean = True) As String
+'StringFromGUID2 never works, even "working" code from vbaccelerator AND MSDN
+GUIDToString = Right$("00000000" & Hex$(tg.Data1), 8) & "-" & Right$("0000" & Hex$(tg.Data2), 4) & "-" & Right$("0000" & Hex$(tg.Data3), 4) & _
+"-" & Right$("00" & Hex$(CLng(tg.Data4(0))), 2) & Right$("00" & Hex$(CLng(tg.Data4(1))), 2) & "-" & Right$("00" & Hex$(CLng(tg.Data4(2))), 2) & _
+Right$("00" & Hex$(CLng(tg.Data4(3))), 2) & Right$("00" & Hex$(CLng(tg.Data4(4))), 2) & Right$("00" & Hex$(CLng(tg.Data4(5))), 2) & _
+Right$("00" & Hex$(CLng(tg.Data4(6))), 2) & Right$("00" & Hex$(CLng(tg.Data4(7))), 2)
+If bBrack Then GUIDToString = "{" & GUIDToString & "}"
+End Function
+
+Private Sub Command3_Click() Handles Command3.Click
+	If List1.ListIndex = -1 Then
+        Label2.Caption = "No radio selected."
+        Exit Sub
+	End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List1.ListIndex, 1)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+    	pInst.GetRadioState(pState)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Label2.Caption = GetRadioStateStr(pState)
+            Text1.Text = "Successfully queried radio state."
+        Else
+        	Label2.Caption = "(Error)"
+            Text1.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Command4_Click() Handles Command4.Click
+    If List2.ListIndex = -1 Then
+        Label4.Caption = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List2.ListIndex, 2)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.GetRadioState(pState)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Label4.Caption = GetRadioStateStr(pState)
+            Text2.Text = "Successfully queried radio state."
+        Else
+            Label4.Caption = "(Error)"
+            Text2.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+Private Sub Command7_Click() Handles Command7.Click
+    If List3.ListIndex = -1 Then
+        Label6.Caption = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List3.ListIndex, 3)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.GetRadioState(pState)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Label6.Caption = GetRadioStateStr(pState)
+            Text3.Text = "Successfully queried radio state."
+        Else
+            Label6.Caption = "(Error)"
+            Text3.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+
+Public Function GetRadioStateStr(lVal As Long) As String
+ If lVal = DRS_RADIO_ON Then Return "DRS_RADIO_ON"
+ If lVal = DRS_SW_RADIO_OFF Then Return "DRS_SW_RADIO_OFF"
+ If lVal = DRS_HW_RADIO_OFF Then Return "DRS_HW_RADIO_OFF"
+ If lVal = DRS_SW_HW_RADIO_OFF Then Return "DRS_SW_HW_RADIO_OFF"
+ If lVal = DRS_HW_RADIO_ON_UNCONTROLLABLE Then Return "DRS_HW_RADIO_ON_UNCONTROLLABLE"
+ If lVal = DRS_RADIO_INVALID Then Return "DRS_RADIO_INVALID"
+ If lVal = DRS_HW_RADIO_OFF_UNCONTROLLABLE Then Return "DRS_HW_RADIO_OFF_UNCONTROLLABLE"
+ Return "(unknown)"
+End Function
+
+Private Sub Command1_Click() Handles Command1.Click
+    If List1.ListIndex = -1 Then
+        Text1.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List1.ListIndex, 1)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_RADIO_ON, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text1.Text = "Successfully set radio state."
+        Else
+            Text1.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Function PrintError(ByVal hr As Long) As String
+    Dim lSize            As Long
+   
+    PrintError = Space$(2000)
+    lSize = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM Or FORMAT_MESSAGE_IGNORE_INSERTS, 0&, hr, 0&, PrintError, Len(PrintError), 0&)
+    If lSize > 2 Then
+        If Mid$(PrintError, lSize - 1, 2) = vbCrLf Then
+            lSize = lSize - 2
+        End If
+    End If
+    PrintError = "Error " & hr & ", " & Left$(PrintError, lSize)
+End Function
+
+Private Sub Command2_Click() Handles Command2.Click
+    If List1.ListIndex = -1 Then
+        Text1.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List1.ListIndex, 1)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_SW_RADIO_OFF, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text1.Text = "Successfully set radio state."
+        Else
+            Text1.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Command6_Click() Handles Command6.Click
+    If List2.ListIndex = -1 Then
+        Text2.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List2.ListIndex, 2)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_RADIO_ON, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text2.Text = "Successfully set radio state."
+        Else
+            Text2.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Command5_Click() Handles Command5.Click
+    If List2.ListIndex = -1 Then
+        Text2.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List2.ListIndex, 2)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_SW_RADIO_OFF, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text2.Text = "Successfully set radio state."
+        Else
+            Text2.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Command9_Click() Handles Command9.Click
+    If List3.ListIndex = -1 Then
+        Text3.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List3.ListIndex, 3)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_RADIO_ON, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text3.Text = "Successfully set radio state."
+        Else
+            Text3.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Command8_Click() Handles Command8.Click
+    If List3.ListIndex = -1 Then
+        Text3.Text = "No radio selected."
+        Exit Sub
+    End If
+    Dim pInst As IRadioInstance = RadioFromIndex(List3.ListIndex, 3)
+    Dim pState As DEVICE_RADIO_STATE
+    If pInst IsNot Nothing Then
+        pInst.SetRadioState(DRS_SW_RADIO_OFF, 5)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text3.Text = "Successfully set radio state."
+        Else
+            Text3.Text = "Error setting radio state, Error " & PrintError(hr)
+        End If
+    End If
+End Sub
+
+Private Sub Form_Load() Handles Form.Load
+    On Error Resume Next
+    Set pRM = New RadioManagementAPI
+    If pRM IsNot Nothing Then
+        Text4.Text = "Sucessfully created Radio Manager Object"
+    Else
+    	Text4.Text = "Failed to create Radio Manager Object, err=" & PrintError(Err.LastHresult)
+    End If
+    On Error GoTo 0
+    EnumRadios
+End Sub
+
+Private Sub Command10_Click() Handles Command10.Click
+    Set pWW = Nothing
+    Set pWL = Nothing
+    Set pBT = Nothing
+    Set pColWW = Nothing
+    Set pColWL = Nothing
+    Set pColBT = Nothing
+    Set pInstWW = Nothing
+    Set pInstWL = Nothing
+    Set pInstBT = Nothing
+    nWW = 0
+    nWL = 0
+    nBT = 0
+    List1.Clear()
+    List2.Clear()
+    List3.Clear()
+    EnumRadios
+End Sub
+
+Private Sub Command14_Click() Handles Command14.Click
+    Unload Me
+End Sub
+
+Private Sub Command11_Click() Handles Command11.Click
+    If pRM IsNot Nothing Then
+    	Dim fState As Long
+        Dim arg2 As Long, arg3 As Long
+        pRM.GetSystemRadioState(fState, arg2, arg3)
+        If fState Then
+        	Text4.Text = "Airplane mode is disabled."
+        Else
+        	Text4.Text = "Airplane mode is enabled."
+        End If
+    End If
+End Sub
+
+Private Sub Command12_Click() Handles Command12.Click
+    If pRM IsNot Nothing Then
+        pRM.SetSystemRadioState(CFALSE)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text4.Text = "Airplane mode enabled."
+        Else
+            Text4.Text = "HRESULT was not S_OK; hr=" & Err.LastHresult
+        End If
+    End If
+End Sub
+
+Private Sub Command13_Click() Handles Command13.Click
+    If pRM IsNot Nothing Then
+        pRM.SetSystemRadioState(CTRUE)
+        Dim hr As Long = Err.LastHresult
+        If hr = S_OK Then
+            Text4.Text = "Airplane mode disabled."
+        Else
+            Text4.Text = "HRESULT was not S_OK; hr=" & Err.LastHresult
+        End If
+    End If
+End Sub
+
+
+End Class
