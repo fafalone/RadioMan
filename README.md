@@ -1,5 +1,7 @@
 # RadioMan
 
+Update (03 Mar 2024): .twinproj has been updated to use a more recent version of WinDevLib (formerly tbShellLib) due to errors in the package tB did not raise at the time this project was released.
+
 ![image](https://github.com/fafalone/RadioMan/assets/7834493/c0dc270a-2bcd-4002-bb7c-28c18441f739)
 
 ## Windows Radio Management
